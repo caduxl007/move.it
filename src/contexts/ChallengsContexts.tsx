@@ -1,8 +1,13 @@
 import { createContext, useState, ReactNode, useEffect } from 'react';
+import Cookies from 'js-cookie';
 import challengs from '../../challenges.json';
+import { LevelUpModal } from '../components/LevelUpModal';
 
 interface IChallengeProviderProps {
   children: ReactNode;
+  level: number;
+  currentExperience: number;
+  challengsCompleted: number;
 }
 
 interface IChallenge {
@@ -21,16 +26,18 @@ interface ChallengsContextData {
   startNewChallenge: () => void;
   resetChallenge: () => void;
   completedChallenge: () => void;
+  closeLevelUpModal: () => void;
 }
 
 export const ChallengsContext = createContext({} as ChallengsContextData);
 
-export function ChallengsProvider({children} : IChallengeProviderProps) {
-  const [level, setLevel] = useState(0);
-  const [currentExperience, setCurrentExperience] = useState(0);
-  const [challengsCompleted, setChallengsCompleted] = useState(0);
+export function ChallengsProvider({children, ...rest} : IChallengeProviderProps) {
+  const [level, setLevel] = useState(rest.level ?? 1);
+  const [currentExperience, setCurrentExperience] = useState(rest.currentExperience ?? 0);
+  const [challengsCompleted, setChallengsCompleted] = useState(rest.challengsCompleted ?? 0);
 
   const [activeChallenge, setActiveChallenge] = useState(null);
+  const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
 
   const experienceToNextLevel = Math.pow((level + 1) * 4, 2);
 
@@ -38,8 +45,19 @@ export function ChallengsProvider({children} : IChallengeProviderProps) {
     Notification.requestPermission();
   }, []);
 
+  useEffect(() => {
+    Cookies.set('level', String(level));
+    Cookies.set('currentExperience', String(currentExperience));
+    Cookies.set('challengsCompleted', String(challengsCompleted));
+  }, [level, currentExperience, challengsCompleted])
+
   function levelUp() {
     setLevel(level + 1);
+    setIsLevelUpModalOpen(true);
+  }
+
+  function closeLevelUpModal() {
+    setIsLevelUpModalOpen(false);
   }
 
   function startNewChallenge() {
@@ -90,11 +108,14 @@ export function ChallengsProvider({children} : IChallengeProviderProps) {
         levelUp, 
         startNewChallenge,
         resetChallenge,
-        activeChallenge,
+        activeChallenge,  
         completedChallenge,
+        closeLevelUpModal,
       }}
       >
       {children}
+
+      {isLevelUpModalOpen && <LevelUpModal />}
     </ChallengsContext.Provider>
   )
 }
